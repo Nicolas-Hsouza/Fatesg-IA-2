@@ -1,5 +1,7 @@
 # Business Intelligence — Exercícios (Curso de IA)
 
+[![Python](https://img.shields.io/badge/python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/) [![BI](https://img.shields.io/badge/BI-Business%20Intelligence-green)](https://en.wikipedia.org/wiki/Business_intelligence) [![IA](https://img.shields.io/badge/IA-Intelig%C3%AAncia%20Artificial-orange)](https://pt.wikipedia.org/wiki/Intelig%C3%AAncia_artificial) [![Faculdade-SENAI%20Fatesg](https://img.shields.io/badge/Faculdade-SENAI%20Fatesg-blue)](https://www.senai.br/)
+
 Este repositório contém os exercícios práticos de Business Intelligence (BI)
 realizados no âmbito do curso de Inteligência Artificial da Faculdade SENAI
 Fatesg.
@@ -8,10 +10,10 @@ Objetivo
 - Fornecer exercícios e notebooks que consolidam os conceitos de BI,
   exploração e visualização de dados, modelagem e apresentação de resultados.
 
-Conteúdo do repositório
-- bi/: notebooks e exemplos de BI
-  - exemple.ipynb — notebook de exemplo
-- PI/: projetos e trabalhos individuais
+Estrutura do repositório
+- `bi/`: notebooks e exemplos de BI
+  - `exemple.ipynb` — notebook de exemplo
+- `PI/`: projetos e trabalhos individuais
 
 Como usar
 1. Instale Python 3.8+ e Jupyter Notebook / JupyterLab.
@@ -20,7 +22,7 @@ Como usar
 	python -m venv .venv
 	.venv\Scripts\Activate.ps1  # PowerShell
 
-3. Instale dependências (se houver um requirements.txt):
+3. Instale dependências (se houver um `requirements.txt`):
 
 	pip install -r requirements.txt
 
@@ -29,8 +31,8 @@ Como usar
 	jupyter notebook
 
 Boas práticas
-- Documente suas análises diretamente nos notebooks.
-- Commit frequente com mensagens claras.
+- Documente suas análises e conclusões diretamente nos notebooks.
+- Faça commits frequentes com mensagens claras e descritivas.
 
 Contribuições
 - Sugestões, correções e novos exercícios são bem-vindos — abra uma issue
@@ -41,3 +43,7 @@ Licença
 
 Contato
 - Coordenação do curso / professor responsável — Faculdade SENAI Fatesg
+
+---
+
+Versão: 2026-02-23
