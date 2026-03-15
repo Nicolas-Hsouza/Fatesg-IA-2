@@ -1,0 +1,58 @@
+{
+    "aluno:1001": {
+        "nome": "Jefferson Silva",
+        "idade": 22,
+        "curso": "Ciência da Computação",
+        "semestre": 4,
+        "status": "Ativo",
+        "disciplinas": [
+            "Estrutura de Dados",
+            "Bancos de Dados",
+            "IA"
+        ]
+    },
+    "aluno:1002": {
+        "nome": "Ana Beatriz Oliveira",
+        "idade": 20,
+        "curso": "Engenharia de Software",
+        "semestre": 2,
+        "status": "Ativo",
+        "disciplinas": [
+            "Cálculo I",
+            "Lógica de Programação"
+        ]
+    },
+    "aluno:1003": {
+        "nome": "Lucas Marcante",
+        "idade": 25,
+        "curso": "Sistemas de Informação",
+        "semestre": 8,
+        "status": "Formando",
+        "disciplinas": [
+            "Gestão de Projetos",
+            "Segurança da Informação"
+        ]
+    },
+    "aluno:1004": {
+        "nome": "Mariana Costa",
+        "idade": 21,
+        "curso": "Análise e Desenvolvimento de Sistemas",
+        "semestre": 3,
+        "status": "Ativo",
+        "disciplinas": [
+            "Desenvolvimento Web",
+            "Arquitetura de Computadores"
+        ]
+    },
+    "aluno:1005": {
+        "nome": "Ricardo Souza",
+        "idade": 23,
+        "curso": "Ciência da Computação",
+        "semestre": 6,
+        "status": "Trancado",
+        "disciplinas": [
+            "Redes de Computadores",
+            "Sistemas Operacionais"
+        ]
+    }
+}
