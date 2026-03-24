@@ -45,9 +45,3 @@ Contribuições
 Licença
 - Consulte o mantenedor do repositório para detalhes sobre a licença.
 
-Contato
-- Coordenação do curso / professor responsável — Faculdade SENAI Fatesg
-
----
-
-Versão: 2026-02-23
