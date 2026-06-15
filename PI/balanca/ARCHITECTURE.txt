@@ -1,0 +1,232 @@
+════════════════════════════════════════════════════════════════════════════════
+                     📊 FLUXO DE DADOS: ESP32 → MongoDB
+════════════════════════════════════════════════════════════════════════════════
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                              ┃
+┃   HARDWARE (Seu ESP32 + Balança)                                           ┃
+┃   ══════════════════════════════════════════════════════════════════════   ┃
+┃                                                                              ┃
+┃   ┌──────────────┐                     ┌──────────────┐                    ┃
+┃   │ Balança Prix │──────[9600 bps]──→  │   MAX232     │                    ┃
+┃   │  3 Fit RS232 │  Protocolo Toledo   │  (converter) │                    ┃
+┃   └──────────────┘                     └──────────────┘                    ┃
+┃                                              │                              ┃
+┃                                              │ (TTL)                        ┃
+┃                                              ▼                              ┃
+┃                                    ┌──────────────────────┐                 ┃
+┃                                    │  ESP32 UART2         │                 ┃
+┃                                    │  GPIO16 (RX)         │                 ┃
+┃                                    │  GPIO17 (TX)         │                 ┃
+┃                                    └──────────────────────┘                 ┃
+┃                                                                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+                                    ↓
+                                    ↓
+                            [ScaleManager]
+                        Parser Serial (STX/ETX)
+                                    ↓
+                            Valida pacote
+                                    ↓
+                         {weight: 1.350, 
+                          status: "stable",
+                          timestamp: 12345}
+                                    ↓
+                                    ↓
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                              ┃
+┃   SOFTWARE (Seu Código C++)                                                ┃
+┃   ══════════════════════════════════════════════════════════════════════   ┃
+┃                                                                              ┃
+┃   ┌─────────────────────────────────────────────────────────────────────┐  ┃
+┃   │                        main.cpp (Loop)                              │  ┃
+┃   │  ──────────────────────────────────────────────────────────────     │  ┃
+┃   │  1. scaleManager.update()    ← Lê serial                            │  ┃
+┃   │  2. wifiManager.update()     ← Reconecta se cair                    │  ┃
+┃   │  3. mongoService.send()      ← Envia para nuvem                     │  ┃
+┃   │  4. mongoService.update()    ← Retry/Flush offline                 │  ┃
+┃   │  5. checkWatchdog()          ← Proteção de travamento              │  ┃
+┃   └─────────────────────────────────────────────────────────────────────┘  ┃
+┃                                                                              ┃
+┃   ┌──────────────────┬─────────────────────┬────────────────────────────┐  ┃
+┃   │  WifiManager     │   MongoService      │    ScaleManager            │  ┃
+┃   │  ────────────    │   ──────────────    │    ────────────            │  ┃
+┃   │ • SSID/Password  │ • URL da API        │ • Parser (STX/ETX)         │  ┃
+┃   │ • Reconexão      │ • Chave API         │ • Validação de pacote      │  ┃
+┃   │ • Backoff exp.   │ • JSON → POST       │ • Debounce temporal        │  ┃
+┃   │ • Heartbeat      │ • Retry automático  │ • Filtro de ruído          │  ┃
+┃   │ • Status         │ • Fila offline      │ • Estatísticas             │  ┃
+┃   └──────────────────┴─────────────────────┴────────────────────────────┘  ┃
+┃                                                                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+                                    ↓
+                                    ↓
+                           [Decisão de Envio]
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+               Wi-Fi OK?        Sem Wi-Fi?     Enviando?
+                    ▼               ▼               ▼
+            ┌───────────────┐  ┌──────────┐  ┌──────────┐
+            │   POST HTTPS  │  │Enfileira │  │ Aguarda  │
+            │   (Imediato)  │  │ (RAM)    │  │ resultado│
+            └───────────────┘  └──────────┘  └──────────┘
+                    │               │
+                    └───────────────┴───────────────┐
+                                                    ▼
+                                        ┌─────────────────────┐
+                                        │ Monta JSON Payload: │
+                                        │ {                   │
+                                        │  dataSource: "..." │
+                                        │  database: "indust.│
+                                        │  collection: "pesa"│
+                                        │  document: {        │
+                                        │    device_id: "..." │
+                                        │    peso: 1.350,     │
+                                        │    status: "stable" │
+                                        │    timestamp: "..." │
+                                        │    rssi_dbm: -50    │
+                                        │  }                  │
+                                        │ }                   │
+                                        └─────────────────────┘
+                                                    │
+                                                    ▼
+                                        ┌──────────────────────────┐
+                                        │  WiFiClientSecure        │
+                                        │  (HTTPS + TLS 1.2)       │
+                                        │  Certificado: DigiCert   │
+                                        └──────────────────────────┘
+                                                    │
+                    ┌───────────────────────────────┼───────────────────────────┐
+                    │                               │                           │
+            HTTP 201 / 200                    HTTP 4xx / 5xx              Timeout / Erro
+                    ▼                               ▼                           ▼
+            ┌─────────────┐                  ┌──────────────┐          ┌───────────────┐
+            │  Sucesso!   │                  │  Retry #1    │          │Enfileira e    │
+            │  contadores │  (falha 1)       │  aguarda 1s  │          │desiste após   │
+            │  + enviados │                  └──────────────┘          │3 tentativas   │
+            └─────────────┘                         │                  └───────────────┘
+                    │                               ▼
+                    │                      ┌──────────────────┐
+                    │                      │  Retry #2 (2s)   │
+                    │                      │  depois
+                    │                      │  Retry #3 (4s)   │
+                    │                      │  depois
+                    │                      │  Falha final
+                    │                      └──────────────────┘
+                    │                               │
+                    └───────────────┬───────────────┘
+                                    ▼
+                                    ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                              ┃
+┃   NUVEM (MongoDB Atlas)                                                    ┃
+┃   ══════════════════════════════════════════════════════════════════════   ┃
+┃                                                                              ┃
+┃   ┌─────────────────────────────────────────────────────────────────────┐  ┃
+┃   │                    cloud.mongodb.com                                 │  ┃
+┃   │  ─────────────────────────────────────────────────────────────      │  ┃
+┃   │                                                                       │  ┃
+┃   │   Cluster0 (M0 Free)                                                │  ┃
+┃   │   ├─ Database: industrial                                           │  ┃
+┃   │   │  └─ Collection: pesagens                                        │  ┃
+┃   │   │     ├─ Document 1: {peso: 1.350, timestamp: "2024-12-21..."}  │  ┃
+┃   │   │     ├─ Document 2: {peso: 2.100, timestamp: "2024-12-21..."}  │  ┃
+┃   │   │     ├─ Document 3: {peso: 1.800, timestamp: "2024-12-21..."}  │  ┃
+┃   │   │     └─ ... (mais documentos)                                   │  ┃
+┃   │   │                                                                  │  ┃
+┃   │   Data API (HTTPS Endpoint)                                         │  ┃
+┃   │   https://data.mongodb-api.com/app/data-XXXXX/endpoint/...         │  ┃
+┃   │                                                                       │  ┃
+┃   └─────────────────────────────────────────────────────────────────────┘  ┃
+┃                                                                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+════════════════════════════════════════════════════════════════════════════════
+
+FILA OFFLINE (Quando sem Wi-Fi):
+═════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ Se Wi-Fi cai durante operação:                                       │
+│                                                                       │
+│ ┌─ Peso 1: {1.350 kg, stable, 12345}                                │
+│ ├─ Peso 2: {1.380 kg, stable, 12520}                                │
+│ ├─ Peso 3: {1.370 kg, stable, 12685}                                │
+│ │                                                                     │
+│ │ Máximo: 5 itens em memória (~80 bytes)                            │
+│ │ Quando reconecta ao Wi-Fi: FLUSH automático                       │
+│ └─ (fila esvaziada)                                                  │
+│                                                                       │
+└──────────────────────────────────────────────────────────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+
+RETRY COM BACKOFF EXPONENCIAL:
+════════════════════════════════
+
+Falha 1 (HTTP 4xx/5xx/Timeout)
+   ▼
+Aguarda 1 segundo (1s)
+   ▼
+Retry #1
+   │
+   ├─ Sucesso? → Pronto! ✅
+   │
+   └─ Falha? → Continua...
+       ▼
+       Aguarda 2 segundos
+       ▼
+       Retry #2
+       │
+       ├─ Sucesso? → Pronto! ✅
+       │
+       └─ Falha? → Continua...
+           ▼
+           Aguarda 4 segundos
+           ▼
+           Retry #3
+           │
+           ├─ Sucesso? → Pronto! ✅
+           │
+           └─ Falha? → Enfileira para depois 📋
+
+════════════════════════════════════════════════════════════════════════════════
+
+WATCHDOG LÓGICO (Proteção):
+════════════════════════════
+
+Se nenhuma atividade por 30 segundos (WATCHDOG_TIMEOUT_MS):
+   ▼
+ESP32 reseta automaticamente
+   ▼
+Volta do boot() → loop() normal
+   ▼
+Retoma operação
+
+Isso evita travamentos no aguardo de Wi-Fi ou serial.
+
+════════════════════════════════════════════════════════════════════════════════
+
+DEBOUNCE (Filtro de Leituras Repetidas):
+═════════════════════════════════════════
+
+┌─ Peso 1: 1.350 kg (50ms depois) → ENVIADO
+├─ Peso 2: 1.350 kg (50ms depois) → IGNORADO (debounce < 500ms)
+├─ Peso 3: 1.350 kg (50ms depois) → IGNORADO
+├─ ... (mais de 500ms passa)
+├─ Peso N: 1.350 kg (504ms depois) → IGNORADO (delta < 0.010 kg)
+├─ ... (peso muda)
+└─ Peso M: 1.380 kg (50ms depois) → ENVIADO (delta > 0.010 kg + debounce OK)
+
+════════════════════════════════════════════════════════════════════════════════
+
+Cada leitura = 1 documento no MongoDB
+Estrutura: 1,5 - 2 KB por documento (não-comprimido)
+Com 24h de leituras a cada 10s: ~8500 documentos = ~12-16 MB
+
+MongoDB Atlas Gratuito: até 512 MB → suficiente para meses de dados!
+
+════════════════════════════════════════════════════════════════════════════════
