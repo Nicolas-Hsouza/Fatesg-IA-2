@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Insira um numro para sbaer se é par ou impar!</title>
+</head>
+<body>
+
+<form method="POST">
+    <input type="number" name="numero" placeholder="Digite um Numero">
+    <button type="submit">analisar</button>
+</form>
+{% if resultado is not none %}
+    <h3>Resultado: {{ resultado}}</h3>
+{% endif %}
+
+</body>
+</html>
